@@ -1,0 +1,20 @@
+{
+  "kpNow": 1.33,
+  "kp24h": 3.33,
+  "kp72h": 3.0,
+  "flareClass": "C1.6",
+  "solarWindSpeed": 421,
+  "bzGsm": -2,
+  "rScale": 0,
+  "sScale": 0,
+  "gScale": 0,
+  "equatorialBias": false,
+  "timeTag": "2026-08-31T14:53:00Z",
+  "alerts": [
+    {
+      "productId": "EF3A",
+      "issuedAt": "2026-08-31 11:47:00",
+      "headline": "ALERT: Electron 2MeV Integral Flux exceeded 1,000 pfu"
+    }
+  ]
+}

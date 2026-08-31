@@ -1,0 +1,37 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(255, 138, 61, 0.12), transparent 50%),
+    radial-gradient(900px 500px at 100% 0%, rgba(92, 225, 255, 0.1), transparent 45%),
+    #070b14;
+  color: #e8eefc;
+}
+
+::selection {
+  background: rgba(92, 225, 255, 0.35);
+}
+
+@keyframes pulse-live {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.live-dot {
+  animation: pulse-live 1.6s ease-in-out infinite;
+}
