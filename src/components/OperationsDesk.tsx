@@ -1,11 +1,14 @@
 "use client";
 
+import DecisionStamp from "@/components/DecisionStamp";
+import InstrumentStrip from "@/components/InstrumentStrip";
 import LanguageToggle from "@/components/LanguageToggle";
 import ScenarioSwitch from "@/components/ScenarioSwitch";
-import StatusBoard from "@/components/StatusBoard";
+import SolarDisc, { FALLBACK_SUVI_171, LIVE_SUVI_171 } from "@/components/SolarDisc";
+import UtcClock from "@/components/UtcClock";
 import type { Lang } from "@/lib/i18n";
 import { copy } from "@/lib/i18n";
-import type { OpsPayload, ScenarioId } from "@/lib/types";
+import type { MissionDecision, OpsPayload, ScenarioId } from "@/lib/types";
 import { useEffect, useRef, useState } from "react";
 
 function sourceLabel(payload: OpsPayload, lang: Lang): string {
@@ -15,14 +18,32 @@ function sourceLabel(payload: OpsPayload, lang: Lang): string {
   return t.fixture;
 }
 
+function topWhy(decision: MissionDecision, lang: Lang): string {
+  const t = copy[lang];
+  if (decision.overrides[0]) return `${t.override}: ${decision.overrides[0]}`;
+  const ranked = [...decision.contributions].sort((a, b) => b.points - a.points);
+  const top = ranked[0];
+  if (!top) return t.noDriver;
+  return `${top.label} — ${top.detail}`;
+}
+
+function liveFrameSrc(): string {
+  return `${LIVE_SUVI_171}?t=${Date.now()}`;
+}
+
 export default function OperationsDesk({ initial }: { initial: OpsPayload }) {
   const [lang, setLang] = useState<Lang>("en");
   const [selectedScenario, setSelectedScenario] = useState<ScenarioId>(initial.scenario);
   const [payload, setPayload] = useState<OpsPayload>(initial);
   const [loading, setLoading] = useState(false);
   const [speaking, setSpeaking] = useState(false);
+  const [sunSrc, setSunSrc] = useState(liveFrameSrc);
   const requestId = useRef(0);
   const t = copy[lang];
+
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
 
   useEffect(() => {
     return () => {
@@ -64,181 +85,82 @@ export default function OperationsDesk({ initial }: { initial: OpsPayload }) {
     window.speechSynthesis.speak(utterance);
   }
 
-  const obs = payload.observation;
+  function failSun() {
+    setSunSrc(FALLBACK_SUVI_171);
+  }
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-      <header className="flex flex-col gap-4 border-b border-white/10 pb-6 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-amber-300/90">
-            {t.tagline}
-          </p>
-          <h1 className="mt-2 text-4xl font-semibold tracking-tight text-white sm:text-5xl">
-            {t.product}
-          </h1>
-          <p className="mt-2 text-sm text-cyan-100/80">{t.location}</p>
-          <p className="mt-1 max-w-xl text-xs text-slate-400">{t.challenge}</p>
-        </div>
-        <LanguageToggle lang={lang} onChange={setLang} />
-      </header>
+    <main className="cockpit">
+      <img
+        className="cockpit-wash"
+        src={sunSrc}
+        alt=""
+        aria-hidden
+        onError={failSun}
+      />
+      <div className="cockpit-veil" aria-hidden />
 
-      <section className="mt-6 grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
-        <ScenarioSwitch
-          lang={lang}
-          selectedScenario={selectedScenario}
-          loading={loading}
-          onChange={loadScenario}
-        />
-        <div className="flex items-center gap-2 text-sm text-slate-300">
+      <header className="rail rail-top">
+        <span className="mark">HELIOCLEAR</span>
+        <UtcClock />
+        <LanguageToggle lang={lang} onChange={setLang} />
+        <p className="badge" data-source={payload.source}>
           <span
-            className={`h-2.5 w-2.5 rounded-full ${
-              payload.source === "live" ? "live-dot bg-emerald-400" : "bg-amber-300"
-            }`}
+            className={`badge-dot ${payload.source === "live" ? "live-dot" : ""}`}
+            aria-hidden
           />
           <span>
-            {t.source}: {sourceLabel(payload, lang)}
+            {sourceLabel(payload, lang)}
+            {loading ? " · · ·" : ""}
           </span>
-        </div>
-      </section>
-
-      {payload.usingFallback ? (
-        <p
-          className="mt-4 rounded-xl border border-amber-300/40 bg-amber-300/10 px-4 py-3 text-sm text-amber-100"
-          role="status"
-        >
-          {t.fallback}
         </p>
-      ) : null}
+      </header>
 
-      {loading ? (
-        <p className="mt-3 text-sm text-cyan-200/80" role="status">
-          {t.loading}
-        </p>
-      ) : null}
-
-      <section className="mt-6 grid gap-4 md:grid-cols-2">
-        <StatusBoard lang={lang} title={t.launch} decision={payload.decision.launch} />
-        <StatusBoard
-          lang={lang}
-          title={t.gnss}
+      <section className="viewport">
+        <DecisionStamp
+          align="launch"
+          channel={t.launch}
+          decision={payload.decision.launch}
+        />
+        <SolarDisc src={sunSrc} credit={t.credit} onError={failSun} />
+        <DecisionStamp
+          align="gnss"
+          channel={t.gnss}
           hint={t.gnssHint}
           decision={payload.decision.gnss}
         />
       </section>
 
-      <section className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
-        {[
-          { k: t.kpNow, v: obs.kpNow.toFixed(2) },
-          { k: t.kp24, v: obs.kp24h.toFixed(2) },
-          { k: t.kp72, v: obs.kp72h.toFixed(2) },
-          { k: t.flare, v: obs.flareClass },
-          { k: t.wind, v: `${Math.round(obs.solarWindSpeed)} km/s` },
-          { k: t.bz, v: `${obs.bzGsm.toFixed(1)} nT` },
-          { k: t.scales, v: `R${obs.rScale} S${obs.sScale} G${obs.gScale}` },
-        ].map((metric) => (
-          <div
-            key={metric.k}
-            className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3"
-          >
-            <p className="text-[11px] uppercase tracking-[0.16em] text-slate-400">{metric.k}</p>
-            <p className="mt-2 font-[family-name:var(--font-mono)] text-lg text-cyan-50">
-              {metric.v}
-            </p>
-          </div>
-        ))}
-      </section>
-
-      <section className="mt-6 grid gap-4 lg:grid-cols-2">
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-          <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-200/80">
-            {t.why}
-          </h2>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            {[
-              { title: t.launch, mission: payload.decision.launch },
-              { title: t.gnss, mission: payload.decision.gnss },
-            ].map((col) => (
-              <div key={col.title}>
-                <p className="text-xs text-slate-400">{col.title}</p>
-                <ul className="mt-2 space-y-2 text-sm text-slate-200">
-                  {col.mission.overrides.map((item) => (
-                    <li key={item}>• {t.override}: {item}</li>
-                  ))}
-                  {col.mission.contributions.map((item) => (
-                    <li key={item.id}>
-                      • {item.label} (+{item.points}) — {item.detail}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
+      <section className="brief">
+        <div className="whys">
+          <p>
+            <span className="why-k">{t.launch}</span>
+            {topWhy(payload.decision.launch, lang)}
+          </p>
+          <p>
+            <span className="why-k">{t.gnss}</span>
+            {topWhy(payload.decision.gnss, lang)}
+          </p>
         </div>
-
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-200/80">
-              {t.briefing}
-            </h2>
-            <button
-              type="button"
-              onClick={speak}
-              className="rounded-md border border-cyan-300/40 px-3 py-1.5 text-sm text-cyan-100 hover:bg-cyan-300/10"
-            >
-              {speaking ? t.stop : t.speak}
-            </button>
-          </div>
-          <p className="mt-4 text-sm leading-relaxed text-slate-100">{payload.briefing[lang]}</p>
+        <div className="briefing-row">
+          <p className="briefing">{payload.briefing[lang]}</p>
+          <button type="button" className="speak" onClick={speak}>
+            {speaking ? t.stop : t.speak}
+          </button>
         </div>
       </section>
 
-      <section className="mt-6 grid gap-4 lg:grid-cols-2">
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-          <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-200/80">
-            {t.alerts}
-          </h2>
-          {obs.alerts.length === 0 ? (
-            <p className="mt-3 text-sm text-slate-400">{t.noAlerts}</p>
-          ) : (
-            <ul className="mt-3 space-y-2 text-sm text-slate-200">
-              {obs.alerts.map((alert) => (
-                <li key={`${alert.productId}-${alert.issuedAt}`}>
-                  <span className="font-[family-name:var(--font-mono)] text-amber-200">
-                    {alert.productId}
-                  </span>{" "}
-                  {alert.headline}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-          <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-200/80">
-            {t.donki}
-          </h2>
-          {payload.donkiStatus === "skipped" ? (
-            <p className="mt-3 text-sm text-slate-400">{t.donkiSkip}</p>
-          ) : payload.donkiStatus === "error" ? (
-            <p className="mt-3 text-sm text-slate-400">{t.donkiError}</p>
-          ) : payload.donki.length === 0 ? (
-            <p className="mt-3 text-sm text-slate-400">{t.donkiEmpty}</p>
-          ) : (
-            <ul className="mt-3 space-y-2 text-sm text-slate-200">
-              {payload.donki.map((item) => (
-                <li key={item.messageID || item.messageBody}>
-                  <span className="text-cyan-200">{item.messageType}</span> — {item.messageBody}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </section>
+      <InstrumentStrip lang={lang} observation={payload.observation} />
 
-      <footer className="mt-10 border-t border-white/10 pt-4 text-xs leading-relaxed text-slate-500">
+      <ScenarioSwitch
+        lang={lang}
+        selectedScenario={selectedScenario}
+        loading={loading}
+        onChange={loadScenario}
+      />
+
+      <footer className="rail rail-foot">
         <p>{t.disclaimer}</p>
-        <p className="mt-2">
-          MIT © 2026 Balbino Tchoutzine · NOAA SWPC public JSON · optional NASA DONKI DEMO_KEY
-        </p>
       </footer>
     </main>
   );

@@ -8,6 +8,20 @@ const nextConfig: NextConfig = {
     "localhost",
     "127.0.0.1",
   ],
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "services.swpc.noaa.gov",
+        pathname: "/images/**",
+      },
+      {
+        protocol: "https",
+        hostname: "sdo.gsfc.nasa.gov",
+        pathname: "/assets/**",
+      },
+    ],
+  },
 };
 
 export default nextConfig;
