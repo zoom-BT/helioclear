@@ -13,8 +13,10 @@ const STAMP_CLASS: Record<Call, string> = {
 function topWhy(decision: MissionDecision, lang: Lang): string {
   const t = copy[lang];
   if (decision.overrides[0]) return `${t.override}: ${decision.overrides[0]}`;
+  const eia = decision.contributions.find((item) => item.id === "eia");
+  if (eia) return eia.detail;
   const ranked = [...decision.contributions].sort((a, b) => b.points - a.points);
-  if (ranked[0]) return ranked[0].detail;
+  if (ranked[0]) return `${ranked[0].label} — ${ranked[0].detail}`;
   return t.nominal;
 }
 
