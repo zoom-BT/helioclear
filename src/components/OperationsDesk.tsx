@@ -1,8 +1,10 @@
 "use client";
 
+import KpSparkline from "@/components/KpSparkline";
 import LanguageToggle from "@/components/LanguageToggle";
 import ScenarioSwitch from "@/components/ScenarioSwitch";
 import StatusBoard from "@/components/StatusBoard";
+import UtcClock from "@/components/UtcClock";
 import type { Lang } from "@/lib/i18n";
 import { copy } from "@/lib/i18n";
 import type { OpsPayload, ScenarioId } from "@/lib/types";
@@ -10,19 +12,23 @@ import { useEffect, useRef, useState } from "react";
 
 function sourceLabel(payload: OpsPayload, lang: Lang): string {
   const t = copy[lang];
-  if (payload.source === "live") return t.live;
-  if (payload.source === "fallback") return t.cached;
-  return t.fixture;
+  if (payload.source === "live") return t.badgeLive;
+  if (payload.source === "fallback") return t.badgeCached;
+  return t.badgeDemo;
 }
 
 export default function OperationsDesk({ initial }: { initial: OpsPayload }) {
   const [lang, setLang] = useState<Lang>("en");
   const [selectedScenario, setSelectedScenario] = useState<ScenarioId>(initial.scenario);
   const [payload, setPayload] = useState<OpsPayload>(initial);
-  const [loading, setLoading] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const requestId = useRef(0);
   const t = copy[lang];
+  const obs = payload.observation;
+
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
 
   useEffect(() => {
     return () => {
@@ -33,7 +39,6 @@ export default function OperationsDesk({ initial }: { initial: OpsPayload }) {
   async function loadScenario(next: ScenarioId) {
     setSelectedScenario(next);
     const id = ++requestId.current;
-    setLoading(true);
     try {
       const res = await fetch(`/api/ops?scenario=${next}`, { cache: "no-store" });
       if (!res.ok) throw new Error("ops failed");
@@ -43,8 +48,6 @@ export default function OperationsDesk({ initial }: { initial: OpsPayload }) {
       if (id === requestId.current) {
         setPayload((prev) => ({ ...prev, usingFallback: true, source: "fallback" }));
       }
-    } finally {
-      if (id === requestId.current) setLoading(false);
     }
   }
 
@@ -64,181 +67,80 @@ export default function OperationsDesk({ initial }: { initial: OpsPayload }) {
     window.speechSynthesis.speak(utterance);
   }
 
-  const obs = payload.observation;
-
   return (
-    <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-      <header className="flex flex-col gap-4 border-b border-white/10 pb-6 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-amber-300/90">
-            {t.tagline}
+    <main className="cockpit">
+      <div className="cockpit-sun" aria-hidden />
+      <div className="cockpit-grain" aria-hidden />
+
+      <header className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 px-5 py-4 sm:px-8">
+        <p className="text-[11px] tracking-[0.42em] text-[color:var(--paper)]">{t.product.toUpperCase()}</p>
+        <p className="text-[11px]">
+          <UtcClock />
+        </p>
+        <div className="flex items-center gap-5">
+          <LanguageToggle lang={lang} onChange={setLang} />
+          <p className="flex items-center gap-2 text-[11px] tracking-[0.16em] text-[color:var(--paper-dim)]">
+            <span
+              className={`h-1.5 w-1.5 rounded-full ${
+                payload.source === "live" ? "live-dot bg-[color:var(--phosphor)]" : "bg-[color:var(--amber)]"
+              }`}
+            />
+            <span>{sourceLabel(payload, lang)}</span>
           </p>
-          <h1 className="mt-2 text-4xl font-semibold tracking-tight text-white sm:text-5xl">
-            {t.product}
-          </h1>
-          <p className="mt-2 text-sm text-cyan-100/80">{t.location}</p>
-          <p className="mt-1 max-w-xl text-xs text-slate-400">{t.challenge}</p>
         </div>
-        <LanguageToggle lang={lang} onChange={setLang} />
       </header>
 
-      <section className="mt-6 grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
-        <ScenarioSwitch
-          lang={lang}
-          selectedScenario={selectedScenario}
-          loading={loading}
-          onChange={loadScenario}
-        />
-        <div className="flex items-center gap-2 text-sm text-slate-300">
-          <span
-            className={`h-2.5 w-2.5 rounded-full ${
-              payload.source === "live" ? "live-dot bg-emerald-400" : "bg-amber-300"
-            }`}
-          />
-          <span>
-            {t.source}: {sourceLabel(payload, lang)}
-          </span>
+      <div className="hairline mx-5 sm:mx-8" />
+
+      <section className="grid flex-1 content-center gap-12 px-5 py-10 sm:px-8 lg:grid-cols-2 lg:gap-0">
+        <div className="lg:pr-16">
+          <StatusBoard lang={lang} title={t.launch} decision={payload.decision.launch} />
+        </div>
+        <div className="lg:border-l lg:border-[color:var(--hairline)] lg:pl-16">
+          <StatusBoard lang={lang} title={t.gnss} hint={t.gnssHint} decision={payload.decision.gnss} />
         </div>
       </section>
 
-      {payload.usingFallback ? (
-        <p
-          className="mt-4 rounded-xl border border-amber-300/40 bg-amber-300/10 px-4 py-3 text-sm text-amber-100"
-          role="status"
-        >
-          {t.fallback}
-        </p>
-      ) : null}
-
-      {loading ? (
-        <p className="mt-3 text-sm text-cyan-200/80" role="status">
-          {t.loading}
-        </p>
-      ) : null}
-
-      <section className="mt-6 grid gap-4 md:grid-cols-2">
-        <StatusBoard lang={lang} title={t.launch} decision={payload.decision.launch} />
-        <StatusBoard
-          lang={lang}
-          title={t.gnss}
-          hint={t.gnssHint}
-          decision={payload.decision.gnss}
-        />
-      </section>
-
-      <section className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
-        {[
-          { k: t.kpNow, v: obs.kpNow.toFixed(2) },
-          { k: t.kp24, v: obs.kp24h.toFixed(2) },
-          { k: t.kp72, v: obs.kp72h.toFixed(2) },
-          { k: t.flare, v: obs.flareClass },
-          { k: t.wind, v: `${Math.round(obs.solarWindSpeed)} km/s` },
-          { k: t.bz, v: `${obs.bzGsm.toFixed(1)} nT` },
-          { k: t.scales, v: `R${obs.rScale} S${obs.sScale} G${obs.gScale}` },
-        ].map((metric) => (
-          <div
-            key={metric.k}
-            className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3"
+      <section className="px-5 pb-6 sm:px-8">
+        <div className="flex items-start justify-between gap-6">
+          <p className="max-w-4xl text-[13px] leading-relaxed text-[color:var(--paper-dim)]">
+            {payload.briefing[lang]}
+          </p>
+          <button
+            type="button"
+            onClick={speak}
+            className="text-btn shrink-0 pt-0.5 text-[10px] text-[color:var(--paper-faint)]"
           >
-            <p className="text-[11px] uppercase tracking-[0.16em] text-slate-400">{metric.k}</p>
-            <p className="mt-2 font-[family-name:var(--font-mono)] text-lg text-cyan-50">
-              {metric.v}
-            </p>
-          </div>
-        ))}
-      </section>
-
-      <section className="mt-6 grid gap-4 lg:grid-cols-2">
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-          <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-200/80">
-            {t.why}
-          </h2>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            {[
-              { title: t.launch, mission: payload.decision.launch },
-              { title: t.gnss, mission: payload.decision.gnss },
-            ].map((col) => (
-              <div key={col.title}>
-                <p className="text-xs text-slate-400">{col.title}</p>
-                <ul className="mt-2 space-y-2 text-sm text-slate-200">
-                  {col.mission.overrides.map((item) => (
-                    <li key={item}>• {t.override}: {item}</li>
-                  ))}
-                  {col.mission.contributions.map((item) => (
-                    <li key={item.id}>
-                      • {item.label} (+{item.points}) — {item.detail}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-200/80">
-              {t.briefing}
-            </h2>
-            <button
-              type="button"
-              onClick={speak}
-              className="rounded-md border border-cyan-300/40 px-3 py-1.5 text-sm text-cyan-100 hover:bg-cyan-300/10"
-            >
-              {speaking ? t.stop : t.speak}
-            </button>
-          </div>
-          <p className="mt-4 text-sm leading-relaxed text-slate-100">{payload.briefing[lang]}</p>
+            {speaking ? t.stop : t.speak}
+          </button>
         </div>
       </section>
 
-      <section className="mt-6 grid gap-4 lg:grid-cols-2">
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-          <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-200/80">
-            {t.alerts}
-          </h2>
-          {obs.alerts.length === 0 ? (
-            <p className="mt-3 text-sm text-slate-400">{t.noAlerts}</p>
-          ) : (
-            <ul className="mt-3 space-y-2 text-sm text-slate-200">
-              {obs.alerts.map((alert) => (
-                <li key={`${alert.productId}-${alert.issuedAt}`}>
-                  <span className="font-[family-name:var(--font-mono)] text-amber-200">
-                    {alert.productId}
-                  </span>{" "}
-                  {alert.headline}
-                </li>
-              ))}
-            </ul>
-          )}
+      <div className="hairline mx-5 sm:mx-8" />
+
+      <section className="grid grid-cols-1 gap-6 px-5 py-5 sm:grid-cols-3 sm:items-end sm:px-8">
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.28em] text-[color:var(--paper-faint)]">{t.kpNow}</p>
+          <div className="mt-2 flex items-end justify-between gap-4">
+            <p className="text-2xl tabular-nums tracking-wide">{obs.kpNow.toFixed(2)}</p>
+            <KpSparkline now={obs.kpNow} h24={obs.kp24h} h72={obs.kp72h} />
+          </div>
         </div>
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-          <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-200/80">
-            {t.donki}
-          </h2>
-          {payload.donkiStatus === "skipped" ? (
-            <p className="mt-3 text-sm text-slate-400">{t.donkiSkip}</p>
-          ) : payload.donkiStatus === "error" ? (
-            <p className="mt-3 text-sm text-slate-400">{t.donkiError}</p>
-          ) : payload.donki.length === 0 ? (
-            <p className="mt-3 text-sm text-slate-400">{t.donkiEmpty}</p>
-          ) : (
-            <ul className="mt-3 space-y-2 text-sm text-slate-200">
-              {payload.donki.map((item) => (
-                <li key={item.messageID || item.messageBody}>
-                  <span className="text-cyan-200">{item.messageType}</span> — {item.messageBody}
-                </li>
-              ))}
-            </ul>
-          )}
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.28em] text-[color:var(--paper-faint)]">{t.flare}</p>
+          <p className="mt-2 text-2xl tabular-nums tracking-wide">{obs.flareClass}</p>
+        </div>
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.28em] text-[color:var(--paper-faint)]">{t.bz}</p>
+          <p className="mt-2 text-2xl tabular-nums tracking-wide">{obs.bzGsm.toFixed(1)} nT</p>
         </div>
       </section>
 
-      <footer className="mt-10 border-t border-white/10 pt-4 text-xs leading-relaxed text-slate-500">
-        <p>{t.disclaimer}</p>
-        <p className="mt-2">
-          MIT © 2026 Balbino Tchoutzine · NOAA SWPC public JSON · optional NASA DONKI DEMO_KEY
-        </p>
+      <div className="hairline mx-5 sm:mx-8" />
+
+      <footer className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+        <ScenarioSwitch lang={lang} selectedScenario={selectedScenario} onChange={loadScenario} />
+        <p className="text-[10px] leading-relaxed tracking-wide text-[color:var(--paper-faint)]">{t.disclaimer}</p>
       </footer>
     </main>
   );

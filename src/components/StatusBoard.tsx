@@ -4,11 +4,19 @@ import type { Lang } from "@/lib/i18n";
 import { copy } from "@/lib/i18n";
 import type { Call, MissionDecision } from "@/lib/types";
 
-const CALL_STYLES: Record<Call, string> = {
-  GO: "border-emerald-400/40 bg-emerald-400/10 text-emerald-300",
-  CONDITIONAL: "border-amber-300/40 bg-amber-300/10 text-amber-200",
-  "NO-GO": "border-rose-400/40 bg-rose-400/10 text-rose-300",
+const STAMP_CLASS: Record<Call, string> = {
+  GO: "stamp-go",
+  CONDITIONAL: "stamp-conditional",
+  "NO-GO": "stamp-nogo",
 };
+
+function topWhy(decision: MissionDecision, lang: Lang): string {
+  const t = copy[lang];
+  if (decision.overrides[0]) return `${t.override}: ${decision.overrides[0]}`;
+  const ranked = [...decision.contributions].sort((a, b) => b.points - a.points);
+  if (ranked[0]) return ranked[0].detail;
+  return t.nominal;
+}
 
 export default function StatusBoard({
   lang,
@@ -21,26 +29,23 @@ export default function StatusBoard({
   hint?: string;
   decision: MissionDecision;
 }) {
-  const t = copy[lang];
+  const long = decision.call === "CONDITIONAL";
   return (
-    <section className={`rounded-2xl border p-5 shadow-[0_0_40px_rgba(0,0,0,0.25)] ${CALL_STYLES[decision.call]}`}>
-      <p className="text-xs font-semibold uppercase tracking-[0.2em] opacity-80">{title}</p>
-      {hint ? <p className="mt-1 text-xs opacity-70">{hint}</p> : null}
-      <p className="mt-4 font-[family-name:var(--font-mono)] text-5xl font-semibold tracking-tight">
+    <section className="min-w-0">
+      <p className="text-[10px] uppercase tracking-[0.32em] text-[color:var(--paper-dim)]">
+        {title}
+        {hint ? <span className="tracking-[0.18em]"> · {hint}</span> : null}
+      </p>
+      <p
+        className={`mt-3 font-[family-name:var(--font-display)] italic leading-none tracking-[-0.03em] ${
+          STAMP_CLASS[decision.call]
+        } ${long ? "text-[clamp(2.5rem,6.6vw,6.6rem)]" : "text-[clamp(4.4rem,12vw,10.2rem)]"}`}
+      >
         {decision.call}
       </p>
-      <p className="mt-3 text-sm opacity-80">
-        {t.score} {decision.score}
+      <p className="mt-4 max-w-[36rem] truncate text-[11px] tracking-wide text-[color:var(--paper-dim)]">
+        {topWhy(decision, lang)}
       </p>
-      {decision.overrides.length > 0 ? (
-        <ul className="mt-3 space-y-1 text-sm">
-          {decision.overrides.map((item) => (
-            <li key={item}>
-              {t.override}: {item}
-            </li>
-          ))}
-        </ul>
-      ) : null}
     </section>
   );
 }

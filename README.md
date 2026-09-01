@@ -3,7 +3,7 @@
 Space-weather operations desk for **Balbino Tchoutzine** (ENSPY Yaoundé).  
 IBM AI Builders Challenge — August 2026 — theme **Advance Space Exploration with AI**.
 
-Live NOAA SWPC JSON (no API key) → **GO / CONDITIONAL / NO-GO** for (1) launch and (2) equatorial GNSS/HF over Cameroon and the Gulf of Guinea, plus a 20-second FR+EN briefing and why-bullets.
+Live NOAA SWPC JSON (no API key) → **GO / CONDITIONAL / NO-GO** for (1) launch and (2) equatorial GNSS/HF over Cameroon and the Gulf of Guinea, plus a 20-second FR+EN briefing and a single top why-line per channel.
 
 Educational prototype, **not certified**. Not a copy of the NASA Jupyter space-weather lab.
 
