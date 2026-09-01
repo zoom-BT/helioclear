@@ -145,10 +145,9 @@ function HelioBodies({ suviSrc }: { suviSrc: string }) {
   return (
     <>
       <AimCamera />
-      <ambientLight intensity={0.38} color="#fff4e4" />
-      <directionalLight position={[2.8, 1.4, 2.6]} intensity={2.15} color="#fff7ee" />
-      <directionalLight position={[-2.2, 0.4, 1.2]} intensity={0.45} color="#ffb56a" />
-      <pointLight position={[-0.2, 0.1, 0.8]} intensity={1.8} color="#ffc078" distance={6} />
+      <ambientLight intensity={0.22} color="#c8d4e8" />
+      <directionalLight position={[2.4, 0.9, 2.0]} intensity={1.05} color="#fff6e8" />
+      <directionalLight position={[-1.8, 0.25, 0.7]} intensity={0.28} color="#ff9a40" />
 
       <group position={[-0.34, 0.04, 0]} rotation={[0.14, 0, 0.08]}>
         <group ref={sun}>
@@ -179,13 +178,13 @@ function HelioBodies({ suviSrc }: { suviSrc: string }) {
 
       <group position={[0.72, -0.06, 0.08]} rotation={[0.41, 0, 0.1]}>
         <group ref={earth} rotation={[0, -Math.PI / 2, 0]}>
-          <mesh>
+          <mesh key={earthMap ? "earth-map" : "earth-plain"}>
             <sphereGeometry args={[0.42, 64, 64]} />
             <meshStandardMaterial
               map={earthMap ?? undefined}
               color={earthMap ? "#ffffff" : "#2a6fbb"}
-              roughness={0.42}
-              metalness={0.12}
+              roughness={0.62}
+              metalness={0}
             />
           </mesh>
           <mesh scale={1.05}>
@@ -225,6 +224,8 @@ export default function HelioGlobe({
         onCreated={({ gl }) => {
           gl.setClearColor(0x070604, 1);
           gl.outputColorSpace = THREE.SRGBColorSpace;
+          gl.toneMapping = THREE.ACESFilmicToneMapping;
+          gl.toneMappingExposure = 0.95;
           const canvas = gl.domElement;
           const lost = (event: Event) => {
             event.preventDefault();
