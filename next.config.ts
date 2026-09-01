@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  transpilePackages: ["three", "@react-three/fiber"],
   // Allow both localhost and 127.0.0.1 so client JS hydrates in either origin.
   allowedDevOrigins: [
     "http://localhost:43147",

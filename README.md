@@ -111,7 +111,7 @@ Bands: GO `< 35`, CONDITIONAL `35–69`, NO-GO `≥ 70` or any hard override.
 
 ## Stack
 
-Next.js App Router, TypeScript, Tailwind CSS, Vitest. Vercel-ready.
+Next.js App Router, TypeScript, Tailwind CSS, three.js / React Three Fiber (SUVI sun + NASA Blue Marble earth), Vitest. Vercel-ready.
 
 ## License
 
