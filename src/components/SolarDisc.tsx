@@ -1,30 +1,47 @@
 "use client";
 
-export const LIVE_SUVI_171 =
-  "https://services.swpc.noaa.gov/images/animations/suvi/primary/171/latest.png";
-export const FALLBACK_SUVI_171 = "/imagery/suvi171.png";
+import { useLascoLoop, useSuviLoop } from "@/components/useFrameLoop";
+import { useEffect } from "react";
 
 export default function SolarDisc({
-  src,
   credit,
-  onError,
+  lasco,
+  onFrame,
 }: {
-  src: string;
   credit: string;
-  onError: () => void;
+  lasco: boolean;
+  onFrame: (src: string) => void;
 }) {
+  const src = useSuviLoop();
+  const lascoSrc = useLascoLoop(lasco);
+
+  useEffect(() => {
+    onFrame(src);
+  }, [src, onFrame]);
+
   return (
     <figure className="solar-wrap">
       <div className="solar-disc">
+        {/* Native img: live NOAA frame loop + onError fallback. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={src}
-          alt="GOES SUVI 171 Å solar disc, NOAA SWPC"
+          alt="GOES SUVI 171 Å solar disc animation, NOAA SWPC"
           width={1280}
           height={1280}
-          onError={onError}
+          onError={(event) => {
+            event.currentTarget.src = "/imagery/suvi171.png";
+          }}
         />
       </div>
       <figcaption className="solar-credit">{credit}</figcaption>
+      {lascoSrc ? (
+        <div className="lasco-strip">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={lascoSrc} alt="" width={512} height={512} />
+          <span>SOHO LASCO C3</span>
+        </div>
+      ) : null}
     </figure>
   );
 }

@@ -4,12 +4,13 @@ import DecisionStamp from "@/components/DecisionStamp";
 import InstrumentStrip from "@/components/InstrumentStrip";
 import LanguageToggle from "@/components/LanguageToggle";
 import ScenarioSwitch from "@/components/ScenarioSwitch";
-import SolarDisc, { FALLBACK_SUVI_171, LIVE_SUVI_171 } from "@/components/SolarDisc";
+import SolarDisc from "@/components/SolarDisc";
 import UtcClock from "@/components/UtcClock";
+import { SUVI_LATEST } from "@/lib/imagery";
 import type { Lang } from "@/lib/i18n";
 import { copy } from "@/lib/i18n";
 import type { MissionDecision, OpsPayload, ScenarioId } from "@/lib/types";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 function sourceLabel(payload: OpsPayload, lang: Lang): string {
   const t = copy[lang];
@@ -27,19 +28,19 @@ function topWhy(decision: MissionDecision, lang: Lang): string {
   return `${top.label} — ${top.detail}`;
 }
 
-function liveFrameSrc(): string {
-  return `${LIVE_SUVI_171}?t=${Date.now()}`;
-}
-
 export default function OperationsDesk({ initial }: { initial: OpsPayload }) {
   const [lang, setLang] = useState<Lang>("en");
   const [selectedScenario, setSelectedScenario] = useState<ScenarioId>(initial.scenario);
   const [payload, setPayload] = useState<OpsPayload>(initial);
   const [loading, setLoading] = useState(false);
   const [speaking, setSpeaking] = useState(false);
-  const [sunSrc, setSunSrc] = useState(liveFrameSrc);
+  const [sunSrc, setSunSrc] = useState(SUVI_LATEST);
   const requestId = useRef(0);
   const t = copy[lang];
+
+  const onFrame = useCallback((src: string) => {
+    setSunSrc(src);
+  }, []);
 
   useEffect(() => {
     document.documentElement.lang = lang;
@@ -85,19 +86,11 @@ export default function OperationsDesk({ initial }: { initial: OpsPayload }) {
     window.speechSynthesis.speak(utterance);
   }
 
-  function failSun() {
-    setSunSrc(FALLBACK_SUVI_171);
-  }
-
   return (
     <main className="cockpit">
-      <img
-        className="cockpit-wash"
-        src={sunSrc}
-        alt=""
-        aria-hidden
-        onError={failSun}
-      />
+      {/* Native img: current NOAA SUVI frame, darkened wash. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img className="cockpit-wash" src={sunSrc} alt="" aria-hidden />
       <div className="cockpit-veil" aria-hidden />
 
       <header className="rail rail-top">
@@ -122,7 +115,11 @@ export default function OperationsDesk({ initial }: { initial: OpsPayload }) {
           channel={t.launch}
           decision={payload.decision.launch}
         />
-        <SolarDisc src={sunSrc} credit={t.credit} onError={failSun} />
+        <SolarDisc
+          credit={t.credit}
+          lasco={selectedScenario === "storm"}
+          onFrame={onFrame}
+        />
         <DecisionStamp
           align="gnss"
           channel={t.gnss}

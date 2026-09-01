@@ -41,7 +41,7 @@ export const copy = {
     langEn: "EN",
     source: "Source",
     noDriver: "Quiet drivers — no single factor dominates.",
-    credit: "NOAA SWPC GOES SUVI 171 Å · NASA SDO",
+    credit: "NOAA SWPC GOES SUVI 171 Å · NASA SDO · SOHO LASCO",
   },
   fr: {
     product: "HelioClear",
@@ -84,6 +84,6 @@ export const copy = {
     langEn: "EN",
     source: "Source",
     noDriver: "Facteurs calmes — aucun n'est dominant.",
-    credit: "NOAA SWPC GOES SUVI 171 Å · NASA SDO",
+    credit: "NOAA SWPC GOES SUVI 171 Å · NASA SDO · SOHO LASCO",
   },
 } as const;
