@@ -4,6 +4,8 @@ export const SUVI_MANIFEST = `${NOAA_ORIGIN}/products/animations/suvi-primary-17
 export const SUVI_LATEST = `${NOAA_ORIGIN}/images/animations/suvi/primary/171/latest.png`;
 export const SUVI_STATIC = "/imagery/suvi171.png";
 export const SUVI_GIF = "/imagery/suvi171.gif";
+/** NASA Visible Earth Blue Marble (public domain), 2048×1024. */
+export const EARTH_BLUE_MARBLE = "/imagery/earth-bluemarble.jpg";
 export const LASCO_MANIFEST = `${NOAA_ORIGIN}/products/animations/lasco-c3.json`;
 
 export const LIVE_FRAME_COUNT = 24;
